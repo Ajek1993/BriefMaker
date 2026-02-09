@@ -99,10 +99,222 @@ def format_model_responses(responses: list) -> str:
 
 # --- GUI ---
 
+SPEECH_JS = """
+<script>
+(function() {
+    // Sprawdź czy przeglądarka wspiera Web Speech API
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+        console.log('Web Speech API nie jest wspierane w tej przeglądarce');
+        return;
+    }
+
+    let activeRecognition = null;
+    let activeButton = null;
+
+    function createMicButton(textarea) {
+        // Sprawdź czy przycisk już istnieje dla tego textarea
+        if (textarea.dataset.micAdded === 'true') return;
+        textarea.dataset.micAdded = 'true';
+
+        // Znajdź kontener Gradio - szukamy elementu z klasą zawierającą 'textbox'
+        let container = textarea.parentElement;
+
+        // Szukaj odpowiedniego kontenera do pozycjonowania
+        while (container && !container.classList.contains('block')) {
+            container = container.parentElement;
+        }
+
+        if (!container) {
+            container = textarea.parentElement;
+        }
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.innerHTML = '🎤';
+        btn.title = 'Kliknij aby dyktować (Chrome/Edge)';
+        btn.className = 'mic-btn';
+        btn.style.cssText = `
+            position: absolute;
+            right: 12px;
+            top: 36px;
+            width: 28px;
+            height: 28px;
+            border: none;
+            background: rgba(255,255,255,0.9);
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 14px;
+            z-index: 1000;
+            transition: all 0.2s;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+        `;
+
+        btn.addEventListener('mouseenter', () => {
+            if (!btn.classList.contains('recording')) {
+                btn.style.background = 'rgba(255,255,255,1)';
+                btn.style.transform = 'scale(1.1)';
+            }
+        });
+        btn.addEventListener('mouseleave', () => {
+            if (!btn.classList.contains('recording')) {
+                btn.style.background = 'rgba(255,255,255,0.9)';
+                btn.style.transform = 'scale(1)';
+            }
+        });
+
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+
+            // Jeśli już nagrywamy na tym przycisku, zatrzymaj
+            if (activeRecognition && activeButton === btn) {
+                activeRecognition.stop();
+                return;
+            }
+
+            // Jeśli nagrywamy na innym przycisku, zatrzymaj tamten
+            if (activeRecognition) {
+                activeRecognition.stop();
+            }
+
+            const recognition = new SpeechRecognition();
+            recognition.lang = 'pl-PL';
+            recognition.continuous = false;
+            recognition.interimResults = true;
+
+            activeRecognition = recognition;
+            activeButton = btn;
+
+            btn.classList.add('recording');
+            btn.style.background = '#ff4444';
+            btn.style.transform = 'scale(1.1)';
+            btn.innerHTML = '⏹️';
+
+            // Zapamiętaj oryginalną wartość przed rozpoczęciem
+            const originalValue = textarea.value || '';
+            let lastInterim = '';
+
+            recognition.onresult = (event) => {
+                let interimTranscript = '';
+                let finalTranscript = '';
+
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    const transcript = event.results[i][0].transcript;
+                    if (event.results[i].isFinal) {
+                        finalTranscript += transcript;
+                    } else {
+                        interimTranscript += transcript;
+                    }
+                }
+
+                const separator = originalValue && !originalValue.endsWith(' ') && !originalValue.endsWith('\\n') ? ' ' : '';
+
+                if (finalTranscript) {
+                    // Finalny tekst - zapisz i wywołaj eventy
+                    textarea.value = originalValue + separator + finalTranscript;
+                    textarea.dispatchEvent(new Event('input', { bubbles: true }));
+                    lastInterim = '';
+                } else if (interimTranscript) {
+                    // Pokaż interim tekst (zostanie nadpisany)
+                    textarea.value = originalValue + separator + interimTranscript;
+                    lastInterim = interimTranscript;
+                }
+            };
+
+            recognition.onend = () => {
+                btn.classList.remove('recording');
+                btn.style.background = 'rgba(255,255,255,0.9)';
+                btn.style.transform = 'scale(1)';
+                btn.innerHTML = '🎤';
+                activeRecognition = null;
+                activeButton = null;
+                // Wywołaj event change żeby Gradio zaktualizowało stan
+                textarea.dispatchEvent(new Event('input', { bubbles: true }));
+                textarea.dispatchEvent(new Event('change', { bubbles: true }));
+            };
+
+            recognition.onerror = (event) => {
+                console.error('Speech recognition error:', event.error);
+                btn.classList.remove('recording');
+                btn.style.background = 'rgba(255,255,255,0.9)';
+                btn.style.transform = 'scale(1)';
+                btn.innerHTML = '🎤';
+                activeRecognition = null;
+                activeButton = null;
+
+                if (event.error === 'not-allowed') {
+                    alert('Brak dostępu do mikrofonu. Zezwól na dostęp w ustawieniach przeglądarki.');
+                }
+            };
+
+            recognition.start();
+        });
+
+        // Ustaw pozycję relative na kontenerze
+        container.style.position = 'relative';
+        container.appendChild(btn);
+    }
+
+    function addMicButtons() {
+        // Znajdź wszystkie textarea w aplikacji Gradio
+        const textareas = document.querySelectorAll('textarea');
+        textareas.forEach(textarea => {
+            // Sprawdź czy pole jest edytowalne (nie readonly i nie disabled)
+            const isEditable = !textarea.disabled && !textarea.readOnly && !textarea.hasAttribute('readonly');
+            if (isEditable) {
+                createMicButton(textarea);
+            }
+        });
+    }
+
+    // Poczekaj na pełne załadowanie Gradio
+    function init() {
+        // Pierwsze uruchomienie z opóźnieniem
+        setTimeout(addMicButtons, 500);
+        setTimeout(addMicButtons, 1000);
+        setTimeout(addMicButtons, 2000);
+    }
+
+    // Uruchom po załadowaniu strony
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+
+    // Obserwuj zmiany w DOM (dla dynamicznie dodawanych pól i zakładek)
+    const observer = new MutationObserver((mutations) => {
+        let shouldCheck = false;
+        for (const mutation of mutations) {
+            if (mutation.addedNodes.length > 0 || mutation.type === 'attributes') {
+                shouldCheck = true;
+                break;
+            }
+        }
+        if (shouldCheck) {
+            setTimeout(addMicButtons, 100);
+        }
+    });
+
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['style', 'class']
+    });
+})();
+</script>
+"""
+
 def create_app():
     """Tworzy i zwraca aplikację Gradio."""
 
-    with gr.Blocks(title="BriefApp") as app:
+    with gr.Blocks(title="BriefApp", head=SPEECH_JS) as app:
         gr.Markdown("# BriefApp - Kreator briefów projektowych")
 
         # Wczytaj zapisany stan
