@@ -29,7 +29,7 @@ Bądź bezwzględny w upraszczaniu. Lepsze działające 20% niż zaplanowane 100
 
 Jeśli czegoś nie wiesz, nie masz pewności, coś jest niejasne albo wzajemnie wykluczające się - ZAPYTAJ MNIE, CO MASZ Z TYM ZROBIĆ. NIE podejmuj takich decyzji samodzielnie.
 
-Zwróć ulepszony brief w formacie markdown.""",
+Zwróć ulepszony brief w formacie markdown zachowując formatowanie markdown.""",
 
     "technology": """Na podstawie poniższego briefu projektowego, rozszerz go o wybór technologii.
 
@@ -62,7 +62,7 @@ Zasady:
 - Żadnych frameworków, jeśli prosty skrypt wystarczy
 - Zwróć KOMPLETNY dokument (brief + technologia)
 
-Odpowiedź w formacie markdown.""",
+Odpowiedź w formacie markdown zachowując formatowanie markdown.""",
 
     "stages": """Na podstawie poniższego briefu z technologią, podziel realizację na etapy.
 
@@ -91,7 +91,7 @@ Pamiętaj: prostota > kompletność. Lepiej 3 działające etapy niż 7 zaplanow
 
 Dla każdego etapu określ: cel, zakres, definicję "done".
 
-Odpowiedź w formacie markdown.""",
+Odpowiedź w formacie markdown zachowując formatowanie markdown.""",
 
     "work_plan": """Na podstawie briefu i etapów, stwórz szczegółowy plan prac.
 
@@ -131,7 +131,7 @@ Zasady:
 - Żadnych kroków "opcjonalnych" - albo robimy, albo nie
 - Max 3-5 kroków na etap (jeśli więcej - podziel etap)
 
-Odpowiedź w formacie markdown.""",
+Odpowiedź w formacie markdown  zachowując formatowanie markdown.""",
 
     "control": """Zweryfikuj spójność planu projektu i wygeneruj finalną, poprawioną wersję.
 
@@ -181,7 +181,7 @@ Odpowiedz:
 
 Na podstawie analizy, po zatwierdzeniu przez usera, NANIEŚ POPRAWKI I WYGENERUJ FINALNY, POPRAWIONY PLAN.
 
-Odpowiedź w formacie markdown:
+Odpowiedź w formacie markdown zachowując formatowanie markdown:
 - Wygeneruj PEŁNY, POPRAWIONY PLAN PRAC uwzględniający wszystkie korekty
 
 To będzie finalny dokument używany do implementacji projektu."""
